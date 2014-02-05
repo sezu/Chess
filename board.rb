@@ -1,4 +1,6 @@
 class Board
+  attr_accessor :board
+
   def initialize
     set_up_board
     set_up_pieces
@@ -13,19 +15,20 @@ class Board
   end
 
   def in_check?(color)
-    king_position = @board.flatten.select do |square|
+    king_position = self.board.flatten.select do |square|
       square.class == King && square.color == color
     end.first.pos
+    #
+    # p king_position
+    # p self
 
-    enemies = @board.flatten.select do |square|
+    enemies = self.board.flatten.select do |square|
       !square.nil? && square.color != color
     end
 
+    enemies.last.pos
+
     enemies.each do |piece|
-      p "checking enemy"
-      #p piece.pos
-      #p piece.moves(piece.pos)
-      self[4,5].class
       if piece.moves(piece.pos).include?(king_position)
         return true
       end
@@ -34,6 +37,19 @@ class Board
   end
 
   def checkmate?(color)
+    if in_check?(color)
+      same_team = @board.flatten.select do |square|
+      !square.nil? && square.color == color
+      end
+
+      same_team.each do |piece|
+        if piece.valid_moves(piece.pos).empty?
+          return false
+        end
+      end
+    end
+    puts "Checkmate!"
+    true
   end
 
   def move(start_pos, end_pos)
@@ -42,9 +58,6 @@ class Board
     raise SelectionError if self[start_x, start_y].nil?
 
     moving_piece = self[start_x, start_y]
-
-    #p moving_piece.valid_moves(start_pos)#.include?(end_pos)
-
     if moving_piece.valid_moves(start_pos).include?(end_pos)
       self[end_x, end_y] = moving_piece
       moving_piece.pos = end_pos
@@ -56,15 +69,12 @@ class Board
 
 
   def move!(start_pos, end_pos)
-    p start_pos
     start_x, start_y = start_pos
     end_x, end_y = end_pos
-    #moving_piece = self[start_x, start_y]
-
+    #p self[start_x, start_y].class
     self[end_x, end_y] = self[start_x, start_y]
-    #moving_piece.pos = end_pos
+    self[end_x, end_y].pos = end_pos
     self[start_x, start_y] = nil
-     p self[start_x, start_y].class
   end
 
 
@@ -93,8 +103,9 @@ class Board
           new_board[x, y] = nil
         else
           duped_pos = self[x, y].pos.dup
-          new_board[x, y] = self[x, y]
-          new_board[x, y].pos = duped_pos
+          x_dup, y_dup = duped_pos
+          new_board[x, y] = self[x, y].dup
+          new_board[x, y].pos = [x_dup, y_dup]
           new_board[x, y].board = new_board
         end
       end
@@ -123,11 +134,11 @@ class Board
 #     self[3, 6] = Knight.new(self, [3, 6], :white)
 
      self[2, 5] = King.new(self, [2, 5], :white)
-     self[4, 5] = Bishop.new(self, [4, 5], :white)
+     # self[4, 5] = Bishop.new(self, [4, 5], :white)
      self[2, 4] = Pawn.new(self, [2, 4], :black)
-     self[0, 0] = King.new(self, [0, 0], :black)
-     self[7, 5] = Rook.new(self, [7, 5], :black)
-     self[5, 4] = Knight.new(self, [5, 4], :white)
+      self[1, 1] = King.new(self, [1, 1], :black)
+ #     self[7, 5] = Rook.new(self, [7, 5], :black)
+ #     self[5, 4] = Knight.new(self, [5, 4], :white)
 
   end
 end

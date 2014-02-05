@@ -36,22 +36,18 @@ class Piece
   end
 
   def valid_moves(pos)
-    moves(pos).select do |move|
-      #moves that don't leave you in check
-
+    good_moves =  moves(pos).select do |move|
       !move_into_check?(move)
     end
+    p good_moves
+    good_moves
   end
 
   def move_into_check?(pos)
     x, y = pos
     current_x, current_y = self.pos
     new_board = @board.dup
-    puts "before move"
-    p new_board
-    new_board.move!(self.pos, pos)
-    puts "After move"
-    p new_board
+    new_board.move!([current_x, current_y], [x, y])
     new_board.in_check?(self.color)
   end
 
@@ -60,30 +56,27 @@ class Piece
   end
 end
 
-
 class SlidingPiece < Piece
   HORIZONTAL = [[0, 1], [1, 0], [-1, 0], [0, -1]]
   DIAGONAL = [[1, 1], [1, -1], [-1, 1], [-1, -1]]
 
   def moves(pos)
-    x, y = pos
+    x_start, y_start = pos
     possible_moves = []
 
     move_dir.each do |direction|
       dx, dy = direction
-      x_copy, y_copy = x + dx, y + dy
+      x, y = x_start + dx, y_start + dy
 
-      while in_bounds?(x_copy, y_copy)
-        if empty_square?(x_copy, y_copy)
-          possible_moves << [x_copy, y_copy]
-          x_copy += dx
-          y_copy += dy
+      while in_bounds?(x, y)
+        if empty_square?(x, y)
+          possible_moves << [x, y]
+          x, y = x + dx , y + dy
         else
-          possible_moves << [x_copy, y_copy] unless attacking_my_team?(x_copy, y_copy)
+          possible_moves << [x, y] unless attacking_my_team?(x, y)
           break
         end
       end
-
     end
     possible_moves
   end
@@ -93,19 +86,19 @@ end
 class SteppingPiece < Piece
 
   def moves(pos)
-    x, y = pos
+    x_start, y_start = pos
     possible_moves = []
-
     steps.each do |step|
       dx, dy = step
-      x_copy, y_copy = x + dx, y + dy
+      x, y = x_start + dx, y_start + dy
 
-      if in_bounds?(x_copy, y_copy) &&
-      (empty_square?(x_copy, y_copy) || !attacking_my_team?(x_copy, y_copy))
+      if in_bounds?(x, y) &&
+      (empty_square?(x, y) || !attacking_my_team?(x, y))
 
-        possible_moves << [x_copy, y_copy]
+        possible_moves << [x, y]
       end
     end
+
     possible_moves
   end
 end
@@ -163,29 +156,29 @@ class Pawn < Piece
   }
 
   def moves(pos)
-    x, y = pos
+    x_start, y_start = pos
     possible_moves = []
-    steps = starting_position?(y)
+    steps = starting_position?(y_start)
 
     PAWN_STEPS[@color][steps].each do |step|
       dx, dy = step
-      x_copy, y_copy = x + dx, y + dy
-      possible_moves << [x_copy, y_copy] if empty_square?(x_copy, y_copy)
+      x, y = x_start + dx, y_start + dy
+      possible_moves << [x, y] if empty_square?(x, y)
     end
 
     possible_moves += check_attack(pos)
   end
 
   def check_attack(pos)
-    x, y = pos
+    x_start, y_start = pos
     possible_attacks = []
 
     PAWN_ATTACKS[@color].each do |attack|
       dx, dy = attack
-      x_copy, y_copy = x + dx, y + dy
-      if in_bounds?(x_copy, y_copy) &&
-      (!empty_square?(x_copy, y_copy) && attacking_enemy?(x_copy, y_copy))
-        possible_attacks << [x_copy, y_copy]
+      x, y = x_start + dx, y_start + dy
+      if in_bounds?(x, y) &&
+      (!empty_square?(x, y) && attacking_enemy?(x, y))
+        possible_attacks << [x, y]
       end
     end
     possible_attacks
