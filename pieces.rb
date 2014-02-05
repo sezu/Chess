@@ -1,11 +1,11 @@
 class Piece
   COLORS = {:white => :blue, :black => :red}
-  PIECE_CHARS = { "Pawn"    => " \u265F ",
-                  "Knight"  => " \u265E ",
-                  "Rook"    => " \u265C ",
-                  "Bishop"  => " \u265D ",
-                  "Queen"   => " \u265B ",
-                  "King"    => " \u265A "
+  PIECE_CHARS = { "Pawn"    => " \u265F  ",
+                  "Knight"  => " \u265E  ",
+                  "Rook"    => " \u265C  ",
+                  "Bishop"  => " \u265D  ",
+                  "Queen"   => " \u265B  ",
+                  "King"    => " \u265A  "
                 }
 
   attr_accessor :pos, :board
@@ -13,10 +13,6 @@ class Piece
 
   def initialize(board, pos, color)
     @board, @pos, @color = board, pos, color
-  end
-
-  def moves(pos)
-    raise NotImplementedError
   end
 
   def in_bounds?(x,y)
@@ -28,7 +24,7 @@ class Piece
   end
 
   def attacking_enemy?(x, y)
-    @color != @board[x, y].color
+    @board[x, y] && @color != @board[x, y].color
   end
 
   def empty_square?(x, y)
@@ -50,70 +46,69 @@ class Piece
   def to_s
     PIECE_CHARS[self.class.to_s].colorize(COLORS[@color])
   end
+
+  def moves(pos)
+    possible_moves = []
+
+    move_vectors.each do |vector|
+      possible_moves += moves_in_direction(pos, vector)
+    end
+
+    possible_moves
+  end
+
+  def moves_in_direction(pos, vector)
+    x, y = pos
+    dx, dy = vector
+
+    possible_moves = []
+
+    max_steps.times do
+      x, y = x + dx, y + dy
+      break unless in_bounds?(x, y)
+
+      if empty_square?(x, y)
+        possible_moves << [x, y]
+      else
+        possible_moves << [x, y] unless attacking_my_team?(x, y)
+        break
+      end
+    end
+
+    possible_moves
+  end
+
+  def max_steps
+    self.class::MAX_STEPS
+  end
 end
 
 class SlidingPiece < Piece
   HORIZONTAL = [[0, 1], [1, 0], [-1, 0], [0, -1]]
   DIAGONAL = [[1, 1], [1, -1], [-1, 1], [-1, -1]]
-
-  def moves(pos)
-    x_start, y_start = pos
-    possible_moves = []
-
-    move_dir.each do |direction|
-      dx, dy = direction
-      x, y = x_start + dx, y_start + dy
-
-      while in_bounds?(x, y)
-        if empty_square?(x, y)
-          possible_moves << [x, y]
-          x, y = x + dx , y + dy
-        else
-          possible_moves << [x, y] unless attacking_my_team?(x, y)
-          break
-        end
-      end
-    end
-    possible_moves
-  end
+  MAX_STEPS = 8
 end
 
 
 class SteppingPiece < Piece
-
-  def moves(pos)
-    x_start, y_start = pos
-    possible_moves = []
-    steps.each do |step|
-      dx, dy = step
-      x, y = x_start + dx, y_start + dy
-
-      if in_bounds?(x, y) &&
-      (empty_square?(x, y) || !attacking_my_team?(x, y))
-
-        possible_moves << [x, y]
-      end
-    end
-
-    possible_moves
-  end
+  MAX_STEPS = 1
 end
 
 
 class Bishop < SlidingPiece
-  def move_dir
+  def move_vectors
     DIAGONAL
   end
 end
 
 class Rook < SlidingPiece
-  def move_dir
+  def move_vectors
     HORIZONTAL
   end
 end
 
 class Queen < SlidingPiece
-  def move_dir
+  def move_vectors
     HORIZONTAL + DIAGONAL
   end
 end
@@ -121,7 +116,7 @@ end
 class Knight < SteppingPiece
   KNIGHT_STEPS = [[1, 2], [2, 1], [2, -1], [1, -2], [-1, -2], [-2, -1], [-2, 1], [-1, 2]]
 
-  def steps
+  def move_vectors
     KNIGHT_STEPS
   end
 end
@@ -129,7 +124,7 @@ end
 class King < SteppingPiece
   KING_STEPS = [[0, 1], [1, 0], [-1, 0], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]]
 
-  def steps
+  def move_vectors
     KING_STEPS
   end
 end
@@ -152,32 +147,43 @@ class Pawn < Piece
   }
 
   def moves(pos)
-    x_start, y_start = pos
-    possible_moves = []
-    steps = starting_position?(y_start)
-
-    PAWN_STEPS[@color][steps].each do |step|
-      dx, dy = step
-      x, y = x_start + dx, y_start + dy
-      possible_moves << [x, y] if empty_square?(x, y)
-    end
-
-    possible_moves += check_attack(pos)
+    stepping_moves(pos) + attacking_moves(pos)
   end
 
-  def check_attack(pos)
+  def stepping_moves(pos)
+    x, y = pos
+    possible_moves = []
+
+    move_vectors(pos).each do |dx, dy|
+      end_x, end_y = x + dx, y + dy
+      possible_moves << [end_x, end_y] if empty_square?(end_x, end_y)
+    end
+
+    possible_moves
+  end
+
+  def attacking_moves(pos)
     x_start, y_start = pos
     possible_attacks = []
 
-    PAWN_ATTACKS[@color].each do |attack|
-      dx, dy = attack
+    attack_vectors.each do |dx, dy|
       x, y = x_start + dx, y_start + dy
-      if in_bounds?(x, y) &&
-      (!empty_square?(x, y) && attacking_enemy?(x, y))
+      if in_bounds?(x, y) && attacking_enemy?(x, y)
         possible_attacks << [x, y]
       end
     end
+
     possible_attacks
+  end
+
+  def move_vectors(pos)
+    x, y = pos
+    steps = starting_position?(y)
+    PAWN_STEPS[@color][steps]
+  end
+
+  def attack_vectors
+    PAWN_ATTACKS[@color]
   end
 
   def starting_position?(y)

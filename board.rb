@@ -16,45 +16,55 @@ class Board
     @board[y][x] = val
   end
 
-  def in_check?(color)
-    king_position = self.board.flatten.select do |square|
+  def pieces
+    @board.flatten.compact
+  end
+
+  def king_for(color)
+    self.board.flatten.select do |square|
       square.class == King && square.color == color
-    end.first.pos
+    end.first
+  end
 
-    enemies = self.board.flatten.select do |square|
-      !square.nil? && square.color != color
-    end
+  def other_color(color)
+    color == :white ? :black : :white
+  end
 
-    enemies.each do |piece|
-      if piece.moves(piece.pos).include?(king_position)
-        return true
-      end
+  def pieces_for(color)
+    self.board.flatten.select do |square|
+      !square.nil? && square.color == color
     end
-    false
+  end
+
+  def in_check?(color)
+    king_position = king_for(color).pos
+
+    enemies = pieces_for(other_color(color))
+
+    enemies.any? { |piece| piece.moves(piece.pos).include?(king_position) }
   end
 
   def checkmate?(color)
-    if in_check?(color)
-      same_team = @board.flatten.select do |square|
-      !square.nil? && square.color == color
-      end
+    return false unless in_check?(color)
 
-      escapes = []
-      same_team.each do |piece|
-        escapes << piece.valid_moves(piece.pos)
-      end
+    same_team = self.pieces.select do |piece|
+      piece.color == color
     end
 
-    escapes.flatten.empty? ? true : false
+    same_team.all? do |piece|
+      piece.valid_moves(piece.pos).empty?
+    end
   end
 
   def move(start_pos, end_pos, color)
     start_x, start_y = start_pos
     end_x, end_y = end_pos
-    raise SelectionError if self[start_x, start_y].nil?
-    raise WrongTeamError if self[start_x, start_y].color != color
 
     moving_piece = self[start_x, start_y]
+
+    raise SelectionError if moving_piece.nil?
+    raise WrongTeamError if moving_piece.color != color
+
     if moving_piece.valid_moves(start_pos).include?(end_pos)
       self[end_x, end_y] = moving_piece
       moving_piece.pos = end_pos
@@ -67,32 +77,38 @@ class Board
   def move!(start_pos, end_pos)
     start_x, start_y = start_pos
     end_x, end_y = end_pos
+
     self[end_x, end_y] = self[start_x, start_y]
     self[end_x, end_y].pos = end_pos
     self[start_x, start_y] = nil
   end
 
   def dup
-    new_board = Board.new()
+    new_board = Board.new
 
-    @board.each_with_index do |rows, y|
-      rows.each_with_index do |square, x|
-        if square.nil?
-          new_board[x, y] = nil
-        else
-          duped_pos = self[x, y].pos.dup
-          x_dup, y_dup = duped_pos
-          new_board[x, y] = self[x, y].dup
-          new_board[x, y].pos = [x_dup, y_dup]
-          new_board[x, y].board = new_board
-        end
-      end
-    end
+    new_board.board = @board.map { |rows| rows.map(&:dup) }
+
+    new_board.pieces.each { |piece| piece.board = new_board }
+
     new_board
   end
 
-  def render
-    to_s
+  def to_s
+    str = ""
+    @board.each_with_index do |rows, idx|
+      str << "#{ 8  - idx} "
+      color = (idx % 2 == 0 ? false : true )
+      rows.each do |square|
+        color = !color
+        str << (square.nil? ? "    " : square.to_s )
+                .colorize( :background => (color ? :white : :black))
+      end
+      str << "\n"
+    end
+    str << "  "
+    ('a'..'h').each { |i| str << " #{i}  " }
+    str << "\n"
+    str
   end
 
   private
@@ -104,7 +120,6 @@ class Board
   PIECES = [Rook, Knight, Bishop, Queen, King, Bishop, Knight, Rook]
   def set_up_pieces
     #To set up pieces individually use: self[1, 2] = Rook.new(self, [1, 2], :black)
-    #Sets up pawns
     16.times do |num|
       color = (num % 2 == 0 ? :white : :black)
       y = (color == :white ? 6 : 1)
@@ -112,28 +127,11 @@ class Board
       self[x, y] = Pawn.new(self, [x, y], color)
     end
 
-    #Set up ROYALTY
     16.times do |num|
       color = (num % 2 == 0 ? :white : :black)
       y = (color == :white ? 7 : 0)
       x = num / 2
       self[x, y] = PIECES[x].new(self, [x, y], color)
     end
-  end
-
-  def to_s
-    puts
-    @board.each_with_index do |rows, idx|
-      print "#{ 8  - idx} "
-      color = (idx % 2 == 0 ? false : true )
-      rows.each do |square|
-        color = !color
-        print (square.nil? ? "   " : square.to_s ).colorize( :background => (color ? :white : :black))
-      end
-      print "\n"
-    end
-    print "  "
-    ('a'..'h').each { |i| print " #{i} " }
-    print "\n"
   end
 end
