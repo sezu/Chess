@@ -48,21 +48,21 @@ class Board
     escapes.flatten.empty? ? true : false
   end
 
-  def move(start_pos, end_pos)
+  def move(start_pos, end_pos, color)
     start_x, start_y = start_pos
     end_x, end_y = end_pos
     raise SelectionError if self[start_x, start_y].nil?
+    raise WrongTeamError if self[start_x, start_y].color != color
 
     moving_piece = self[start_x, start_y]
     if moving_piece.valid_moves(start_pos).include?(end_pos)
       self[end_x, end_y] = moving_piece
       moving_piece.pos = end_pos
       self[start_x, start_y] = nil
-
+    else
+      raise EndpointError
     end
-
   end
-
 
   def move!(start_pos, end_pos)
     start_x, start_y = start_pos
@@ -70,23 +70,6 @@ class Board
     self[end_x, end_y] = self[start_x, start_y]
     self[end_x, end_y].pos = end_pos
     self[start_x, start_y] = nil
-  end
-
-
-
-  def to_s
-    9.times { |i| print (i == 0 ? " " : " #{i-1} ") }
-    puts
-    @board.each_with_index do |rows, idx|
-      print "#{idx}"
-      color = (idx % 2 == 0 ? false : true )
-      rows.each do |square|
-        color = !color
-        print (square.nil? ? "   " : square.to_s ).colorize( :background => (color ? :white : :black))
-      end
-      print "\n"
-    end
-    print "\n"
   end
 
   def dup
@@ -120,7 +103,7 @@ class Board
 
   PIECES = [Rook, Knight, Bishop, Queen, King, Bishop, Knight, Rook]
   def set_up_pieces
-    # To set up pieces individually use: self[1, 2] = Rook.new(self, [1, 2], :black)
+    #To set up pieces individually use: self[1, 2] = Rook.new(self, [1, 2], :black)
     #Sets up pawns
     16.times do |num|
       color = (num % 2 == 0 ? :white : :black)
@@ -136,5 +119,21 @@ class Board
       x = num / 2
       self[x, y] = PIECES[x].new(self, [x, y], color)
     end
+  end
+
+  def to_s
+    puts
+    @board.each_with_index do |rows, idx|
+      print "#{ 8  - idx} "
+      color = (idx % 2 == 0 ? false : true )
+      rows.each do |square|
+        color = !color
+        print (square.nil? ? "   " : square.to_s ).colorize( :background => (color ? :white : :black))
+      end
+      print "\n"
+    end
+    print "  "
+    ('a'..'h').each { |i| print " #{i} " }
+    print "\n"
   end
 end

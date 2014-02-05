@@ -36,11 +36,7 @@ class Piece
   end
 
   def valid_moves(pos)
-    good_moves =  moves(pos).select do |move|
-      !move_into_check?(move)
-    end
-    p good_moves
-    good_moves
+    moves(pos).select { |move| !move_into_check?(move) }
   end
 
   def move_into_check?(pos)
