@@ -1,6 +1,6 @@
 require            'colorize'
 require_relative   'board'
-require_relative   'pieces'
+#require_relative   'pieces'
 require            'io/console'
 
 # use STDIN.getch  will give one character at a time from
@@ -25,23 +25,56 @@ class EndpointError < StandardError
 end
 
 class ChessGame
-  #Chess logic
-end
+  def initialize(player1, player2)
+    @board = Board.new
+    @players = {:white => player1, :black => player2}
 
+  end
+
+
+  def play
+    to_move = :white
+    until game_over?
+      @board.render
+      @players[to_move].play_turn
+
+
+      to_move = (to_move == :white ? :black : :white)
+    end
+    @board.render
+  end
+
+
+  def game_over?
+    false
+  end
+end
 
 
 class Player
+  attr_reader :name
+  def initialize(name)
+    @name = name
+  end
   #handle user input
+
+  def play_turn
+    gets
+
+  end
 end
 
+p1 = Player.new("TJ")
+p2 = Player.new("Kevin")
 
-
-chessboard = Board.new
+game = ChessGame.new(p1, p2)
+game.play
 # chessboard.render
 #chessboard.move([7, 5], [4, 5])
-chessboard.render
-chessboard.move([2, 5], [1, 5])
-chessboard.render
+# chessboard.move([6, 5], [6, 7])
+# p chessboard.checkmate?(:white)
+# chessboard.render
+# chessboard.move([2, 7], [3, 7])
 # chessboard.render
 # chessboard.move([3, 6], [5, 5])
 #

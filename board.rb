@@ -1,3 +1,5 @@
+require_relative 'pieces'
+
 class Board
   attr_accessor :board
 
@@ -18,15 +20,10 @@ class Board
     king_position = self.board.flatten.select do |square|
       square.class == King && square.color == color
     end.first.pos
-    #
-    # p king_position
-    # p self
 
     enemies = self.board.flatten.select do |square|
       !square.nil? && square.color != color
     end
-
-    enemies.last.pos
 
     enemies.each do |piece|
       if piece.moves(piece.pos).include?(king_position)
@@ -42,14 +39,13 @@ class Board
       !square.nil? && square.color == color
       end
 
+      escapes = []
       same_team.each do |piece|
-        if piece.valid_moves(piece.pos).empty?
-          return false
-        end
+        escapes << piece.valid_moves(piece.pos)
       end
     end
-    puts "Checkmate!"
-    true
+
+    escapes.flatten.empty? ? true : false
   end
 
   def move(start_pos, end_pos)
@@ -71,7 +67,6 @@ class Board
   def move!(start_pos, end_pos)
     start_x, start_y = start_pos
     end_x, end_y = end_pos
-    #p self[start_x, start_y].class
     self[end_x, end_y] = self[start_x, start_y]
     self[end_x, end_y].pos = end_pos
     self[start_x, start_y] = nil
@@ -119,26 +114,27 @@ class Board
 
   private
 
-
-
   def set_up_board
     @board = Array.new(8) { Array.new(8) }
   end
 
+  PIECES = [Rook, Knight, Bishop, Queen, King, Bishop, Knight, Rook]
   def set_up_pieces
-    # self[1, 2] = Rook.new(self, [1, 2], :black)
-#     self[2, 2] = Bishop.new(self, [2, 2], :black)
-#     self[5, 5] = Knight.new(self, [5, 5], :black)
-#     self[7, 7] = Rook.new(self, [7, 7], :white)
-#     self[6, 7] = Bishop.new(self, [6, 7], :white)
-#     self[3, 6] = Knight.new(self, [3, 6], :white)
+    # To set up pieces individually use: self[1, 2] = Rook.new(self, [1, 2], :black)
+    #Sets up pawns
+    16.times do |num|
+      color = (num % 2 == 0 ? :white : :black)
+      y = (color == :white ? 6 : 1)
+      x = num / 2
+      self[x, y] = Pawn.new(self, [x, y], color)
+    end
 
-     self[2, 5] = King.new(self, [2, 5], :white)
-     # self[4, 5] = Bishop.new(self, [4, 5], :white)
-     self[2, 4] = Pawn.new(self, [2, 4], :black)
-      self[1, 1] = King.new(self, [1, 1], :black)
- #     self[7, 5] = Rook.new(self, [7, 5], :black)
- #     self[5, 4] = Knight.new(self, [5, 4], :white)
-
+    #Set up ROYALTY
+    16.times do |num|
+      color = (num % 2 == 0 ? :white : :black)
+      y = (color == :white ? 7 : 0)
+      x = num / 2
+      self[x, y] = PIECES[x].new(self, [x, y], color)
+    end
   end
 end
