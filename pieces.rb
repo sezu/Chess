@@ -53,7 +53,6 @@ class Piece
     move_vectors.each do |vector|
       possible_moves += moves_in_direction(pos, vector)
     end
-
     possible_moves
   end
 
@@ -102,6 +101,13 @@ class Bishop < SlidingPiece
 end
 
 class Rook < SlidingPiece
+  attr_accessor :moved
+
+  def initialize(board, pos, color)
+    super
+    @moved = false
+  end
+
   def move_vectors
     HORIZONTAL
   end
@@ -121,11 +127,53 @@ class Knight < SteppingPiece
   end
 end
 
+
+#squares empty between king and rook
+
 class King < SteppingPiece
+  attr_accessor :moved, :in_check
+
   KING_STEPS = [[0, 1], [1, 0], [-1, 0], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]]
+  KING_CASTLE = [[2, 0], [-2, 0]]
+
+  def initialize(board, pos, color)
+    super
+    @moved = false
+    @in_check = false
+  end
+
+  def castling_moves
+    return [] if @moved || @in_check
+    moves = []
+
+    2.times do |num|
+      rook_x = (num % 2 == 0 ? 7 : 0)
+      dx = (num % 2 == 0 ? 1 : -1)
+      x, y = self.pos.dup
+
+      if rook_can_castle?(rook_x, y) && castling_space_clear?(x, dx, y)
+        moves << KING_CASTLE[num] unless castling_into_check?(x, dx, y)
+      end
+    end
+    moves
+  end
+
+  def rook_can_castle?(x, y)
+    @board[x, y].class == Rook &&
+    @board[x, y].color == self.color &&
+    !@board[x, y].moved
+  end
+
+  def castling_space_clear?(x, dx, y)
+    @board[x + dx, y].nil? && @board[x + (dx * 2), y].nil?
+  end
+
+  def castling_into_check?(x, dx, y)
+    move_into_check?([x + dx, y]) || move_into_check?([x + (dx * 2), y])
+  end
 
   def move_vectors
-    KING_STEPS
+    KING_STEPS  + castling_moves
   end
 end
 

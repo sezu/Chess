@@ -3,7 +3,7 @@ require_relative   'board'
 require_relative   'errors'
 require            'io/console'
 
-# use STDIN.getch  will give one character at a time from
+# use   will give one character at a time from
 # system('clear')
 
 class ChessGame
@@ -11,13 +11,17 @@ class ChessGame
     @board = Board.new
     @players = {:white => player1, :black => player2}
     @turn = :white
+    @cursor = [0, 0]
+    @cursor_selected = nil
   end
 
   def play
     until game_over?
+      puts "Got back to the top of the play loop"
       show_board
-      prompt_player_to_move
-      take_turn
+      #prompt_player_to_move
+      #take_turn
+      magic_cursor
       swap_turn
     end
     show_board
@@ -28,7 +32,8 @@ class ChessGame
 
   def show_board
     system('clear')
-    puts @board
+
+    puts @board.to_s(@cursor, @cursor_selected)
   end
 
   def prompt_player_to_move
@@ -43,6 +48,40 @@ class ChessGame
     begin
       from, to = @players[@turn].play_turn
       @board.move(from, to, @turn)
+    rescue SelectionError, WrongTeamError, EndpointError, BadInputError => e
+      puts e.message
+      retry
+    end
+  end
+
+  def magic_cursor
+    begin
+      @cursor_selected = nil
+      move = []
+
+      until move.count == 2
+        prompt_player_to_move
+        action = STDIN.getch
+        case action
+        when "d"
+          @cursor[0] += 1 if @cursor[0] + 1 < 8
+        when "w"
+          @cursor[1] -= 1 if @cursor[1] - 1 >= 0
+        when "a"
+          @cursor[0] -= 1 if @cursor[0] - 1 >= 0
+        when "s"
+          @cursor[1] += 1 if @cursor[1] + 1 < 8
+        when " "
+          @cursor_selected = @cursor.dup unless @cursor_selected
+          move << @cursor.dup
+        when "q"
+          raise StandardError
+        end
+        show_board
+      end
+    @board.clear_selected_moves
+    @cursor_selected = nil
+    @board.move(move[0], move[1], @turn)
     rescue SelectionError, WrongTeamError, EndpointError, BadInputError => e
       puts e.message
       retry
